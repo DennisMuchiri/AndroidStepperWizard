@@ -1,0 +1,92 @@
+apply plugin: 'com.android.application'
+apply plugin: 'kotlin-android'
+apply plugin: 'kotlin-kapt'
+apply from: "$rootDir.path/config/project_properties.gradle"
+apply from: '../sample/code_coverage.gradle'
+
+android {
+    compileSdkVersion project.androidCompileSdkVersion
+
+    defaultConfig {
+        applicationId "com.stepstone.stepper.sample"
+        minSdkVersion project.androidMinSdkVersion
+        targetSdkVersion project.androidTargetSdkVersion
+        versionCode 1
+        versionName "1.0"
+
+        vectorDrawables.useSupportLibrary = true
+
+        testInstrumentationRunner "com.stepstone.stepper.sample.test.runner.TestButlerRunner"
+        com.android.ddmlib.DdmPreferences.setTimeOut(60000)
+    }
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+        }
+
+        debug {
+            testCoverageEnabled true
+        }
+    }
+
+    testOptions {
+        animationsDisabled true
+    }
+
+    adbOptions {
+        installOptions getAdbInstallOptions()
+    }
+}
+
+dependencies {
+    //implementation "org.jetbrains.kotlin:kotlin-stdlib-jre7:$kotlinVersion"
+    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlinVersion"
+
+    implementation project(':material-stepper')
+    implementation "com.android.support:appcompat-v7:$androidSupportLibraryVersion"
+    implementation "com.android.support:recyclerview-v7:$androidSupportLibraryVersion"
+    implementation "com.android.support:design:$androidSupportLibraryVersion"
+
+    implementation "com.jakewharton:butterknife:$butterknifeVersion"
+    kapt "com.jakewharton:butterknife-compiler:$butterknifeVersion"
+
+    implementation "uk.co.chrisjenx:calligraphy:$calligraphyVersion"
+
+    androidTestImplementation project(':espresso-material-stepper')
+
+    androidTestImplementation "com.android.support.test:runner:$supportTestVersion"
+    androidTestImplementation "com.android.support.test:rules:$supportTestVersion"
+    androidTestImplementation "com.android.support.test.espresso:espresso-core:$espressoVersion"
+    androidTestImplementation "com.android.support.test.espresso:espresso-intents:$espressoVersion"
+    androidTestImplementation "com.android.support.test.espresso:espresso-contrib:$espressoVersion"
+    androidTestImplementation "com.linkedin.testbutler:test-butler-library:$testButlerVersion"
+
+    androidTestUtil "com.linkedin.testbutler:test-butler-app:$testButlerVersion@apk"
+    androidTestImplementation("com.android.support:support-annotations:$androidSupportLibraryVersion") {
+        force = true
+    }
+    androidTestImplementation("com.android.support:support-v4:$androidSupportLibraryVersion") {
+        force = true
+    }
+    androidTestImplementation("com.android.support:appcompat-v7:$androidSupportLibraryVersion") {
+        force = true
+    }
+}
+
+def instrumentationTestTaskName = 'connectedCheck'
+
+apply from: '../sample/screenshots.gradle'
+
+tasks[instrumentationTestTaskName].finalizedBy {
+    [fetchScreenshotsTask, generateScreenshotReportTask]
+}
+
+def findTaskInLib(String taskName) {
+    return rootProject.childProjects['material-stepper'].getTasksByName(taskName, false).first()
+}
+
+task ('checkWithUiTests', dependsOn: [generateScreenshotReportTask, findTaskInLib('testDebugUnitTest'), findTaskInLib('lintDebug'), tasks['mergedJacocoTestReport'], findTaskInLib('pmd'), findTaskInLib('findbugs'), findTaskInLib('checkstyle')]) {
+    group = "Verification"
+    description = "Runs unit and UI tests with code coverage and makes code analysis."
+}
